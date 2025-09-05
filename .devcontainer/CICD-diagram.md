@@ -1,0 +1,49 @@
+```mermaid
+flowchart TD
+  %% Main CI/CD path
+  S1("Build Docker Image using GitHub secrets")
+  S2("Run Container & Agent Evaluation")
+  S3("Upload Evaluation Results & Logs")
+  S4("Fail Fast: Stop on Failure")
+  S5("OIDC Azure Login (Dev)")
+  S6("Use Secrets for ACR Access")
+  S7("Build & Push Docker Image to ACR")
+  S8("Ensure App Service Plan/Web App")
+  S9("Deploy to Azure App Service (Dev)")
+  S10("Healthcheck & Rollback (Dev)")
+  S11("Upload Deployment Logs (Dev)")
+  END_DEV("End Dev Cycle")
+
+  %% Main dev flow
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 --> S7
+  S7 --> S8
+  S8 --> S9
+  S9 --> S10
+  S10 --> S11
+  S11 --> END_DEV
+
+  %% End on failure at step 4
+  S4 -- "Fail" --> END_FAIL["End Process"]
+
+  %% Rollback for dev
+  S10 -- "On Failure: Rollback" --> END_FAIL
+
+  %% Start of prod cycle branching from step 4
+  S4 -.-> S12["OIDC Azure Login (Prod)"]
+  S12 --> S13["Use Secrets for ACR Access"]
+  S13 --> S14["Build & Push Docker Image to ACR (Prod)"]
+  S14 --> S15["Ensure AKS Cluster/Namespace"]
+  S15 --> S16["Deploy to AKS (Prod)"]
+  S16 --> S17["Expose Service via LoadBalancer"]
+  S17 --> S18["Healthcheck & Rollback (Prod)"]
+  S18 --> S19["Upload Deployment Logs (Prod)"]
+  S19 --> END_PROD["End Prod Cycle"]
+
+  %% Rollback for prod
+  S18 -- "On Failure: Rollback" --> END_FAIL
+```
